@@ -1,5 +1,5 @@
 //importScripts('../build/ffmpeg.js');
-importScripts('https://github.com/KostaMalsev/videoconverter.js/blob/master/build/ffmpeg.js');
+importScripts('https://raw.githubusercontent.com/KostaMalsev/videoconverter.js/master/build/ffmpeg.js');
 
 var now = Date.now;
 
