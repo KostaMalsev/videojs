@@ -1,6 +1,6 @@
 //importScripts('../build/ffmpeg-all-codecs.js');
 
-importScripts('https://raw.githubusercontent.com/KostaMalsev/videoconverter.js/master/build/ffmpeg-all-codecs.js');
+importScripts('ffmpeg-all-codecs.js');
 
 var now = Date.now;
 
