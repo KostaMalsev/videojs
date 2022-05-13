@@ -1,2 +1,16 @@
-
-
+{  
+  "name": "ffmpegjsallcodes",  
+  "version": "1.0.0",  
+  "description": "Library is ffmpeg compiled to work in prowser without sharedArrayBuffer,videoconverter.js product project",  
+  "main": "ffmpeg-all-codecs.js",  
+  "repository": {    
+    "type": "git",    
+    "url": "git+https://github.com/bgrins/videoconverter.js"  
+  },  
+  "author": "Brian Grinstead,Aaron Marasco",  
+  "license": "MIT",  
+  "bugs": {    
+    "url": "https://github.com/bgrins/videoconverter.js"  
+  },  
+  "homepage": "http://bgrins.github.io/videoconverter.js/"
+}
