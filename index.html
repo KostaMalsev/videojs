@@ -1,3 +1,461 @@
-  
-  <script type='text/javascript' src='terminal.js'></script>
 
+
+<head>
+  title>Create Gif</title>
+  <meta name="viewport" content="width=device-width,height=device-height,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+  <meta charset="utf-8">
+
+  <link rel="stylesheet" href="styles.css">
+
+</head>
+
+<body>
+
+<div class="dialog">
+
+
+    <div class="subtitle" id='log'> </div>
+
+
+		<div class="button-wrapper upload-buttons">
+		
+	    <input type="file" accept="video/*" id="input-tag" multiple/>
+			<label for="input-tag">
+				<div class="button">Video to GIF</div>
+		  </label>
+	
+	    <input type="file" accept="image/gif" id="image-upload" multiple/>
+			<label for="image-upload">
+				<div class="button">GIF to video</div>
+		  </label>
+		
+		</div>
+
+		<br>
+
+    <img id="img-tag">
+    
+    <video controls id="video-tag" class="hidden" style="height:100px"></video>
+
+		<br>
+
+    <div class="button convert-button hidden">Convert</div>
+    <div id="files"></div>
+
+<script>
+
+//bunny: 0:40 - 0:47
+//ffmpeg -ss 00:00:00 -to 00:0:8  -i bunny.mov -c copy sbunny.mov
+
+var worker;
+var sampleImageData=null;
+var sampleVideoData=null;
+var outputElement;
+var filesElement;
+var running = false;
+var isWorkerLoaded = false;
+
+
+
+
+//Link to html elements:
+const uploadButtons = document.querySelector('.upload-buttons');
+const imageUploadButton = document.querySelector('#image-upload');
+const videoTag = document.querySelector("#video-tag");
+const inputTag = document.querySelector("#input-tag");
+const log= document.querySelector('#log');  
+const vFigure = document.querySelector('#videoContainer');  
+const imgTag = document.querySelector('#img-tag');
+
+  
+let button = document.querySelector(".convert-button");
+
+
+let command = "";
+
+
+
+//Check if worker is supported:
+var isSupported = (function() {
+  return document.querySelector && window.URL && window.Worker;
+})();
+
+
+
+//Check if worker is ready to run:
+function isReady() {
+  return !running && isWorkerLoaded;
+  //return !running && isWorkerLoaded && sampleImageData && sampleVideoData;
+}
+
+
+
+//Set the defaults:
+//vFigure.style.visibility = "hidden";
+
+
+
+//Image loader:
+window.addEventListener('load', async function() {
+  
+  
+  imageUploadButton.addEventListener('change', async function() {
+    
+		if (videoDownloadLink) videoDownloadLink.remove();
+
+      if (this.files && this.files[0]) {
+          
+          imgTag.onload = () => {
+            URL.revokeObjectURL(imgTag.src);  // no longer needed, free memory
+          }
+
+          imgTag.src = URL.createObjectURL(this.files[0]); // set src to blob url
+          
+          //Generate blob from url:
+          let blob = await fetch(imgTag.src).then(r => r.blob());
+
+          //Convert image to buffer Array:
+          retreiveImage(blob);
+          
+					// show convert button
+          button.classList.remove('hidden', 'gray');
+
+					uploadButtons.classList.add('hidden');
+
+          //Set to convert gif to video:
+          button.removeEventListener('click',convertVideo2Gif);
+          button.removeEventListener('click',convertGifToMp4);
+
+          //Attach run command to convert button
+          button.addEventListener('click',convertGifToMp4);
+          
+      }
+  });
+  
+  
+  
+
+inputTag.addEventListener('change',  readVideo);
+
+
+//Read video from url
+async function readVideo(event) {
+  
+		if (videoDownloadLink) videoDownloadLink.remove();
+
+    if (event.target.files && event.target.files[0]) {
+			
+			var srcResult = URL.createObjectURL(event.target.files[0]);
+			
+			videoTag.onload = () => {
+      	URL.revokeObjectURL(srcResult);  // no longer needed, free memory
+      }
+	
+			videoTag.src = srcResult;
+			
+			videoTag.classList.remove('hidden');
+  
+      //Generate blob from url:
+      let blob = await fetch(srcResult).then(r => r.blob());
+      
+      //Convert image to buffer Array:
+      retreiveVideo(event.target.files[0]);
+
+    }
+
+
+		uploadButtons.classList.add('hidden');
+    
+    
+    // show convert button
+    button.classList.remove('hidden', 'gray');
+
+    //Attach run command to convert button
+    button.removeEventListener('click',convertVideo2Gif);
+    button.removeEventListener('click',convertGifToMp4);
+    
+    button.addEventListener('click',convertVideo2Gif);
+
+  }
+  
+});
+
+
+//Push blob to arrayBuffer of image
+function retreiveImage(blob) {
+
+  var fileReader = new FileReader();
+  
+  fileReader.onload = function(event) {
+    sampleImageData = new Uint8Array(event.target.result);
+  };
+  
+  fileReader.readAsArrayBuffer(blob);
+  
+}
+
+
+
+
+//Push blob to arrayBuffer of video
+function retreiveVideo(file) {
+
+  var fileReader = new FileReader();
+  
+  fileReader.onload = function(event) {
+    
+    sampleVideoData = new Uint8Array(event.target.result);
+    
+  };
+  
+  fileReader.readAsArrayBuffer(file);
+  
+}
+
+
+
+
+
+var videoDownloadLink;
+
+function initWorker() {
+  
+  if(isWorkerLoaded) return;
+  
+  console.log('Start init worker')
+  
+  worker = new Worker("worker-asm.js");
+  
+	button.classList.remove("hidden");
+  button.classList.add("gray");
+  button.innerText = 'Loading engine...';
+  
+  filesElement = document.querySelector("#files");
+
+  
+  worker.onmessage = function (event) {
+      
+      const message = event.data;
+      
+      console.log('Received message:',message.type)
+      
+      
+      if (message.type == "ready") {
+        
+        console.log('Worker is ready');
+
+				button.innerText = 'Converting...';
+        
+        isWorkerLoaded = true;
+        
+        //Run the command:
+        runCommand(command);
+                
+      }
+      
+      if (message.type == "done") {
+      
+          //stopRunning();
+          console.log('worker has finished')
+          
+          var buffers = message.data;
+          
+          button.innerHTML = 'Convert';
+					button.classList.add("hidden");
+					
+					uploadButtons.classList.remove('hidden');
+					
+					imgTag.src = '';
+										
+					videoTag.src = '';
+					videoTag.classList.add('hidden');
+                    
+          //var blob_ = new Blob([buffers[0].data]);
+          
+          //let video_ = document.querySelector('#video-source');
+          
+          //Check if conversion succeeded:
+          if(typeof(message.data) == 'undefined' ){
+            log.innerHTML = 'Failed to convert';
+            stopRunning();
+            return;
+          }
+          
+          //Generate the downloadable link:
+          buffers.forEach(function(file) {
+            
+						videoDownloadLink = getDownloadLink(file.data, file.name);
+
+            filesElement.appendChild(videoDownloadLink);
+            
+          });
+          
+          stopRunning();
+
+					log.innerText = '';
+
+      }
+      
+      if (message.type == "start") 
+        console.log("Worker has received command\n");
+      
+      if (message.type == "stdout") 
+        console.log(message.data + "\n");
+        log.innerHTML = message.data;
+    }
+
+  }
+
+
+let workerInitPromise=null;
+
+function initFinished(resolve)
+{
+  if(isWorkerLoaded) resolve();
+}
+
+
+
+
+//Convert mp4 264 video to gif:
+async function convertGifToMp4()
+{
+  await runCommand('-i input.gif -vf "crop=trunc(iw/2)*2:trunc(ih/2)*2" -b:v 0 -crf 25 -f mp4 -vcodec libx264 -pix_fmt yuv420p output.mp4');
+}
+
+//Convert gif to mp4 264 format video:
+async function convertVideo2Gif()
+{
+  //await runCommand('-i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos" -c:v pam -f image2pipe - | convert -delay 10 - -loop 0 -layers optimize output.gif');
+  //await runCommand('-ss 30 -t 3 -i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 output.gif');
+  
+  //let cmnd = '-i input.mp4 -vf scale=320:-1:flags=lanczos,fps=15 outputfile.gif'; //works
+  let cmnd = '-i input.mp4 -vf scale=520:-1:flags=lanczos,fps=30 outputfile.gif'; //works
+  
+	//let cmnd = '-i input.mp4 -vf scale=720:-1:flags=lanczos,fps=15 outputfile.gif';
+	
+	//Using pallete:
+	//let cmnd = '-i input.mp4 -vf fps=15,scale=320:-1:flags=lanczos, palettegen palette.png';
+  //let cmnd = '-i input.mp4 -vf fps=16,scale=600:-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:reserve_transparent=0[p];[s1][p]paletteuse -y outputfile.gif';
+  //let cmnd = `-i input.mp4 -vf scale=320:-1:flags=lanczos,fps=15,drawtext="text='Made with Codeit': fontcolor=black: x=160: y=-1" outputfile.gif`; //with watermark
+  
+  //let cmnd = '-i input.mp4 -i fps=30,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse output.gif'
+  
+  await runCommand(cmnd);
+}
+
+
+
+//Convert webm video to gif:
+async function convertGifToWebm()
+{
+  await runCommand('-t 5 -i input.webm -vf showinfo -strict -2 output.gif');
+}
+
+
+//Run the ffmpeg:
+async function runCommand(text) {
+  
+  command = text;
+
+    //Load engine if not yet loaded:    
+    initWorker();
+
+    if (isReady()) {
+
+      startRunning();
+
+      var args = parseArguments(text);
+
+      console.log(args);
+
+      worker.postMessage({
+        type: "command",
+        arguments: args,
+        files: [{
+            "name": "input.gif",
+            "data": sampleImageData
+          },
+          {
+            "name": "input.mp4",
+            "data": sampleVideoData
+          }
+        ]
+
+      });
+    }
+}
+
+
+function startRunning() {
+  //document.querySelector("#image-loader").style.visibility = "visible";
+  //outputElement.className = "";
+  //filesElement.innerHTML = "";
+  button.innerHTML = 'Converting...';
+  running = true;
+}
+
+
+
+function stopRunning() {
+  //document.querySelector("#image-loader").style.visibility = "hidden";
+  button.innerHTML = 'Convert';
+  running = false;
+}
+
+
+
+
+
+
+function parseArguments(text) {
+  
+  text = text.replace(/\s+/g, ' ');
+  var args = [];
+  // Allow double quotes to not split args.
+  text.split('"').forEach(function(t, i) {
+    t = t.trim();
+    if ((i % 2) === 1) {
+      args.push(t);
+    } else {
+      args = args.concat(t.split(" "));
+    }
+  });
+  return args;
+}
+
+
+let tmpBlob=null;
+
+//Generate downloadable link
+function getDownloadLink(fileData, fileName) {
+
+  if (fileName.match(/\.jpeg|\.gif|\.jpg|\.png/)) {
+
+    var blob = new Blob([fileData]);
+    var src = window.URL.createObjectURL(blob);
+    var img = document.createElement('img');
+
+    img.src = src;
+    return img;
+    
+  } else {
+
+      var a = document.createElement('a');
+
+      a.classList.add('button');
+
+      a.download = fileName;
+      var blob = new Blob([fileData]);
+      var src = window.URL.createObjectURL(blob);
+      a.href = src;
+      a.textContent = 'Download result';
+      return a;
+  }
+}
+
+
+
+
+</script>
+</body>
