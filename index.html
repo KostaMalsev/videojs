@@ -314,6 +314,8 @@ async function convertGifToMp4()
   await runCommand('-i input.gif -vf "crop=trunc(iw/2)*2:trunc(ih/2)*2" -b:v 0 -crf 25 -f mp4 -vcodec libx264 -pix_fmt yuv420p output.mp4');
 }
 
+
+
 //Convert gif to mp4 264 format video:
 async function convertVideo2Gif()
 {
@@ -321,7 +323,8 @@ async function convertVideo2Gif()
   //await runCommand('-ss 30 -t 3 -i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 output.gif');
   
   //let cmnd = '-i input.mp4 -vf scale=320:-1:flags=lanczos,fps=15 outputfile.gif'; //works
-  let cmnd = '-i input.mp4 -vf scale=520:-1:flags=lanczos,fps=30 outputfile.gif'; //works
+  
+	//let cmnd = '-i input.mp4 -vf scale=520:-1:flags=lanczos,fps=30 outputfile.gif'; //works
   
 	//let cmnd = '-i input.mp4 -vf scale=720:-1:flags=lanczos,fps=15 outputfile.gif';
 	
@@ -331,6 +334,9 @@ async function convertVideo2Gif()
   //let cmnd = `-i input.mp4 -vf scale=320:-1:flags=lanczos,fps=15,drawtext="text='Made with Codeit': fontcolor=black: x=160: y=-1" outputfile.gif`; //with watermark
   
   //let cmnd = '-i input.mp4 -i fps=30,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse output.gif'
+
+	let cmnd = `-i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 output.gif`
+
   
   await runCommand(cmnd);
 }
