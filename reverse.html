@@ -319,6 +319,9 @@ async function convertGifToMp4()
 //Convert gif to mp4 264 format video:
 async function convertVideo2Gif()
 {
+  reverseVideo();
+  return;
+  
   //await runCommand('-i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos" -c:v pam -f image2pipe - | convert -delay 10 - -loop 0 -layers optimize output.gif');
   //await runCommand('-ss 30 -t 3 -i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 output.gif');
   
@@ -327,6 +330,23 @@ async function convertVideo2Gif()
 	let cmnd = '-i input.mp4 -vf scale=520:-1:flags=lanczos,fps=30 outputfile.gif'; //works
   
 	//let cmnd = '-i input.mp4 -vf scale=720:-1:flags=lanczos,fps=15 outputfile.gif';
+  
+  await runCommand(cmnd);
+}
+
+
+//Convert gif to mp4 264 format video:
+async function reverseVideo()
+{
+  //await runCommand('-i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos" -c:v pam -f image2pipe - | convert -delay 10 - -loop 0 -layers optimize output.gif');
+  //await runCommand('-ss 30 -t 3 -i input.mp4 -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 output.gif');
+  
+  //let cmnd = '-i input.mp4 -vf scale=320:-1:flags=lanczos,fps=15 outputfile.gif'; //works
+  
+	//let cmnd = '-i input.mp4 -vf scale=520:-1:flags=lanczos,fps=30 outputfile.gif'; //works
+  
+	//let cmnd = '-i input.mp4 -vf scale=720:-1:flags=lanczos,fps=15 outputfile.gif';
+  let cmnd = '-i input.mp4 -vf reverse output.mp4';
   
   await runCommand(cmnd);
 }
