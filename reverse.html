@@ -344,7 +344,7 @@ async function reverseVideo()
 	//let cmnd = '-i input.mp4 -vf scale=520:-1:flags=lanczos,fps=30 outputfile.gif'; //works
   
 	//let cmnd = '-i input.mp4 -vf scale=720:-1:flags=lanczos,fps=15 outputfile.gif';
-  let cmnd = '-i input.mp4 -vf reverse output.mp4';'
+  let cmnd = '-i input.mp4 -vf reverse output.mp4';
   
   await runCommand(cmnd);
 }
